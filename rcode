@@ -1,0 +1,34 @@
+library(XML)
+library(dplyr)
+library(data.table)
+
+link<-"http://www.metacritic.com/browse/games/title"
+platforms<-c("ps4","xboxone","switch","pc","wii-u","3ds","vita","ios","ps3","ds")
+symbols<-c("",letters)
+page<-"?page="
+
+data<-list()
+for (platform in platforms){
+  for (symbol in symbols){
+    p<-0
+    while (length(p)!=0){
+      temp<-htmlTreeParse(readLines(paste0(link,"/",platform,"/",symbol,page,p)), useInternalNodes = TRUE)
+
+      title<-xpathSApply(temp, '//div[@id="main"]//div[@class = "basic_stat product_title"]/a/text()',xmlValue,trim=T)
+      title<-gsub("\n","",title)
+      title<-gsub("\\s+\\(.*?)$","",title)
+      
+      score<-xpathSApply(temp, '//div[@id="main"]//div[@class = "basic_stat product_score brief_metascore"]/div/text()',xmlValue,trim=T)
+      score<-gsub("\n","",score)
+      score<-as.integer(score)
+      
+      release_date<-xpathSApply(temp, '//div[@id="main"]//span[@class = "data"]/text()',xmlValue,trim=T)
+      release_date<-as.Date(release_date,"%b %d, %Y")
+      
+      data[[platform]][[symbol]][[p+1]]<-data.frame(title=title,score=score,release_date=release_date)
+      
+      p<-xpathSApply(temp, '//span[@class="flipper next"]/a/@href')
+      p<-as.integer(gsub(".*(.)$","\\1",p))
+    }
+  }
+}
