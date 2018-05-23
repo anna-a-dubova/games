@@ -1,6 +1,9 @@
 library(XML)
 library(dplyr)
 library(data.table)
+library(plotly)
+
+options(stringsAsFactors=F)
 
 link<-"http://www.metacritic.com/browse/games/title"
 platforms<-c("ps4","xboxone","switch","pc","wii-u","3ds","vita","ios","ps3","ds")
@@ -12,6 +15,8 @@ for (platform in platforms){
   for (symbol in symbols){
     p<-0
     while (length(p)!=0){
+      print(paste(platform,symbol,p))
+      
       temp<-htmlTreeParse(readLines(paste0(link,"/",platform,"/",symbol,page,p)), useInternalNodes = TRUE)
 
       title<-xpathSApply(temp, '//div[@id="main"]//div[@class = "basic_stat product_title"]/a/text()',xmlValue,trim=T)
@@ -22,13 +27,30 @@ for (platform in platforms){
       score<-gsub("\n","",score)
       score<-as.integer(score)
       
-      release_date<-xpathSApply(temp, '//div[@id="main"]//span[@class = "data"]/text()',xmlValue,trim=T)
+      release_date<-xpathSApply(temp, '//div[@id="main"]//span[@class = "data"]',xmlValue,trim=T)
       release_date<-as.Date(release_date,"%b %d, %Y")
       
-      data[[platform]][[symbol]][[p+1]]<-data.frame(title=title,score=score,release_date=release_date)
+      data[[platform]][[symbol]][[p+1]]<-data.frame(title=title,score=score,release_date=release_date,platform=platform)
       
-      p<-xpathSApply(temp, '//span[@class="flipper next"]/a/@href')
-      p<-as.integer(gsub(".*(.)$","\\1",p))
+            p<-xpathSApply(temp, '//span[@class="flipper next"]/a/@href')
+      p<-as.integer(gsub(".*=(\\d+)$","\\1",p))
+      
     }
   }
 }
+
+
+data<-unlist(data,recursive=F)
+data<-unlist(data,recursive=F)
+data<-rbindlist(data)
+write.csv(data,"data.csv",row.names=F)
+data<-read.csv("data.csv")
+
+
+palette<-c("darkblue", "darkgreen", "darkred","black","red","pink","lightblue","yellow","blue","lightpink")
+palette<-setNames(palette, platforms)
+
+plot_ly(data[!is.na(data$score),],x=~release_date,y=~score,
+        color=~platform,colors=palette,alpha=0.5,
+        text=~title,
+        type="scatter",mode='markers')
