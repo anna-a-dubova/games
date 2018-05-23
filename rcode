@@ -50,7 +50,10 @@ data<-read.csv("data.csv")
 palette<-c("darkblue", "darkgreen", "darkred","black","red","pink","lightblue","yellow","blue","lightpink")
 palette<-setNames(palette, platforms)
 
+axis<-list(showticklabels= FALSE)
+
 plot_ly(data[!is.na(data$score),],x=~release_date,y=~score,
         color=~platform,colors=palette,alpha=0.5,
         text=~title,
-        type="scatter",mode='markers')
+        type="scatter",mode='markers') %>% 
+  layout(xaxis=axis, yaxis=axis)
